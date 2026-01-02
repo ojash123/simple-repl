@@ -1,0 +1,137 @@
+package simple;
+
+import java.util.*;
+import java_cup.runtime.*;
+
+// =====================================================================
+// SECTION 1: PREAMBLE & IMPORTS
+// =====================================================================
+
+parser code {:
+    // You can add helper methods or fields here if needed.
+:};
+
+// =====================================================================
+// SECTION 2: TERMINAL & NON-TERMINAL DECLARATIONS
+// =====================================================================
+
+// --- TERMINALS (Tokens from the lexer) ---
+terminal LEFT_PAREN, RIGHT_PAREN, LEFT_BRACE, RIGHT_BRACE, COMMA, SEMICOLON;
+terminal ASSIGN, EQ, LT, GT, PLUS, MINUS, STAR, SLASH;
+terminal INT, BOOLEAN, IF, ELSE, WHILE, RETURN, TRUE, FALSE, FUNC, VAR; // Added VAR
+
+// Terminals with values
+terminal String IDENTIFIER;
+terminal Integer INTEGER_LIT;
+
+// --- NON-TERMINALS (Grammar rules) ---
+nonterminal ProgramNode program;
+nonterminal List<FuncDef> func_definitions;
+nonterminal FuncDef func_definition;
+nonterminal List<VarDecl> params;
+nonterminal List<Stmt> stmts;
+nonterminal Stmt stmt;
+nonterminal BlockStmt block;
+nonterminal List<VarDecl> declarations;
+nonterminal VarDecl declaration;
+nonterminal Type type;
+nonterminal List<Expr> args;
+nonterminal Expr expr;
+nonterminal Expr simple_expr;
+
+// =====================================================================
+// SECTION 3: PRECEDENCE & ASSOCIATIVITY
+// =====================================================================
+
+precedence left EQ;
+precedence left LT, GT;
+precedence left PLUS, MINUS;
+precedence left STAR, SLASH;
+
+// =====================================================================
+// SECTION 4: THE GRAMMAR RULES
+// =====================================================================
+
+// MODIFIED: Program is now a list of functions followed by a list of statements.
+program ::= func_definitions:fns declarations:globals stmts:main
+    {: RESULT = new ProgramNode(fns, globals, main); :};
+
+repl_unit ::= 
+    func_definition:fd {: RESULT = fd; :} 
+  | declaration:d      {: RESULT = d; :} 
+  | stmt:s             {: RESULT = s; :} 
+  | expr:e             {: RESULT = e; :};
+
+func_definitions ::= func_definitions:list func_definition:fd
+    {: list.add(fd); RESULT = list; :}
+    | /* empty */
+    {: RESULT = new ArrayList<FuncDef>(); :};
+
+// MODIFIED: Function definitions now start with 'func' instead of a type.
+func_definition ::= FUNC IDENTIFIER:name LEFT_PAREN params:p RIGHT_PAREN stmt:body
+    {: RESULT = new FuncDef(name, p, body); :};
+
+params ::= params:list COMMA declaration:d
+    {: list.add(d); RESULT = list; :}
+    | declaration:d
+    {: RESULT = new ArrayList<VarDecl>(Arrays.asList(d)); :}
+    | /* empty */
+    {: RESULT = new ArrayList<VarDecl>(); :};
+
+stmt ::= block:b
+    {: RESULT = b; :}
+    | IDENTIFIER:id ASSIGN expr:e SEMICOLON
+    {: RESULT = new AssignStmt(id, e); :}
+    | IF LEFT_PAREN expr:cond RIGHT_PAREN stmt:t ELSE stmt:e
+    {: RESULT = new IfStmt(cond, t, e); :}
+    | IF LEFT_PAREN expr:cond RIGHT_PAREN stmt:t
+    {: RESULT = new IfStmt(cond, t, null); :}
+    | WHILE LEFT_PAREN expr:cond RIGHT_PAREN stmt:body
+    {: RESULT = new LoopStmt(cond, body); :}
+    | RETURN expr:e SEMICOLON
+    {: RESULT = new ReturnStmt(e); :};
+
+block ::= LEFT_BRACE declarations:decls stmts:s RIGHT_BRACE
+    {: RESULT = new BlockStmt(decls, s); :};
+
+declarations ::= declarations:list declaration:d SEMICOLON
+    {: list.add(d); RESULT = list; :}
+    | /* empty */
+    {: RESULT = new ArrayList<VarDecl>(); :};
+
+declaration ::= type:t IDENTIFIER:id
+    {: RESULT = new VarDecl(id, t); :};
+
+type ::= INT {: RESULT = Type.INTEGER; :}
+    | BOOLEAN {: RESULT = Type.BOOLEAN; :}
+    | VAR {: RESULT = null; :};
+
+stmts ::= stmts:list stmt:s
+    {: list.add(s); RESULT = list; :}
+    | /* empty */
+    {: RESULT = new ArrayList<Stmt>(); :};
+
+expr ::= expr:e1 PLUS expr:e2      {: RESULT = new BinaryExpr(e1, Operator.ADD, e2); :}
+    | expr:e1 MINUS expr:e2     {: RESULT = new BinaryExpr(e1, Operator.SUB, e2); :}
+    | expr:e1 STAR expr:e2      {: RESULT = new BinaryExpr(e1, Operator.MUL, e2); :}
+    | expr:e1 SLASH expr:e2     {: RESULT = new BinaryExpr(e1, Operator.DIV, e2); :}
+    | expr:e1 EQ expr:e2        {: RESULT = new BinaryExpr(e1, Operator.EQ, e2); :}
+    | expr:e1 LT expr:e2        {: RESULT = new BinaryExpr(e1, Operator.LT, e2); :}
+    | expr:e1 GT expr:e2        {: RESULT = new BinaryExpr(e1, Operator.GT, e2); :}
+    | simple_expr:se            {: RESULT = se; :};
+
+simple_expr ::= INTEGER_LIT:i     {: RESULT = new IntLiteral(i); :}
+    | TRUE                      {: RESULT = new BoolLiteral(true); :}
+    | FALSE                     {: RESULT = new BoolLiteral(false); :}
+    | IDENTIFIER:id             {: RESULT = new IdExpr(id); :}
+    | IDENTIFIER:name LEFT_PAREN args:a RIGHT_PAREN
+    {: RESULT = new FuncCall(name, a); :}
+    | LEFT_PAREN expr:e RIGHT_PAREN {: RESULT = e; :};
+
+args ::= args:list COMMA expr:e
+    {: list.add(e); RESULT = list; :}
+    | expr:e
+    {: RESULT = new ArrayList<Expr>(Arrays.asList(e)); :}
+    | /* empty */
+    {: RESULT = new ArrayList<Expr>(); :};
+
