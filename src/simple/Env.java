@@ -45,7 +45,7 @@ class ReturnValueException extends RuntimeException {
     public ReturnValueException(EnvItem val) { this.value = val; }
 }  
 
-class Env{
+public class Env{
     private final Deque<Map<String, EnvItem>> scopeStack;
     public Env(){
         this.scopeStack = new LinkedList<>();

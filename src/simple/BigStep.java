@@ -12,6 +12,22 @@ public class BigStep {
         }
         throw new RuntimeException("Invalid Type");
     }
+
+    public void evaluate(AstNode node, Env env) {
+        if (node instanceof FuncDef) {
+            evaluate((FuncDef) node, env);
+            System.out.println("<function defined>");
+        } else if (node instanceof Stmt) {
+            evaluate((Stmt) node, env);
+            // Statements (like assignment) might not print anything, which is fine
+        } else if (node instanceof Expr) {
+            EnvItem result = evaluate((Expr) node, env);
+            System.out.println("val it = " + result);
+        } else {
+            throw new RuntimeException("Unknown AST Node");
+        }
+    }
+
     public static Env evaluateProgram(ProgramNode program){
         Env env = new Env();
         BigStep evaluator = new BigStep();

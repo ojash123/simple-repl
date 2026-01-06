@@ -26,6 +26,7 @@ terminal Integer INTEGER_LIT;
 
 // --- NON-TERMINALS (Grammar rules) ---
 nonterminal ProgramNode program;
+nonterminal AstNode repl_unit;
 nonterminal List<FuncDef> func_definitions;
 nonterminal FuncDef func_definition;
 nonterminal List<VarDecl> params;
@@ -52,15 +53,17 @@ precedence left STAR, SLASH;
 // SECTION 4: THE GRAMMAR RULES
 // =====================================================================
 
-// MODIFIED: Program is now a list of functions followed by a list of statements.
-program ::= func_definitions:fns declarations:globals stmts:main
-    {: RESULT = new ProgramNode(fns, globals, main); :};
-
 repl_unit ::= 
     func_definition:fd {: RESULT = fd; :} 
   | declaration:d      {: RESULT = d; :} 
   | stmt:s             {: RESULT = s; :} 
   | expr:e             {: RESULT = e; :};
+
+// MODIFIED: Program is now a list of functions followed by a list of statements.
+program ::= func_definitions:fns declarations:globals stmts:main
+    {: RESULT = new ProgramNode(fns, globals, main); :};
+
+
 
 func_definitions ::= func_definitions:list func_definition:fd
     {: list.add(fd); RESULT = list; :}

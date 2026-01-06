@@ -12,7 +12,7 @@ class Indent {
 
 // --- Base AST Node Interfaces ---
 
-interface AstNode {
+public interface AstNode {
     String toString(int indent);
 
     @Override

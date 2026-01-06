@@ -6,11 +6,31 @@ import java.util.List;
 import java.util.Map;
 
 public class TypeChecker {
-    private TypeEnvironment typeEnv; //Symbol table
+    public final TypeEnvironment typeEnv; //Symbol table
     private static final TypeConst INT_TYPE = new TypeConst(Type.INTEGER);
     private static final TypeConst BOOL_TYPE = new TypeConst(Type.BOOLEAN);
     private TypeExpr currentFunctionReturnType;
 
+    public TypeChecker() {
+        this.typeEnv = new TypeEnvironment();
+    }
+
+    // New Entry Point for REPL
+    public TypeExpr check(AstNode node) throws Exception {
+        if (node instanceof FuncDef) {
+            FuncDef f = (FuncDef) node;
+            registerFunctionSignature(f); // Add name to scope first
+            checkFuncDef(f);              // Then check body
+            return typeEnv.lookup(f.name); // Return the function type
+        } else if (node instanceof Stmt) {
+            checkStmt((Stmt) node);
+            return null; // Statements don't return a type value to print
+        } else if (node instanceof Expr) {
+            return checkExpr((Expr) node);
+        }
+        throw new Exception("Unknown AST Node for checking");
+    }
+    /* 
     public void typeCheckProgram(ProgramNode program) throws Exception {
         this.typeEnv = new TypeEnvironment();
 
@@ -31,7 +51,7 @@ public class TypeChecker {
         }
         System.out.println(typeEnv.toString());
     }
-
+    */
 
     private void registerFunctionSignature(FuncDef funcDef) throws Exception {
         List<TypeExpr> paramTypes = new ArrayList<>();
