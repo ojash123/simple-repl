@@ -5,44 +5,75 @@ import java_cup.runtime.Symbol;
 
 public class App {
     public static void main(String[] args) {
-        System.out.println("Simple REPL v1.0");
+        System.out.println("Simple REPL v2.0 (Multi-line & Typed)");
+        System.out.println("Type 'exit' to quit.");
 
-        // 1. Initialize Persistent Environments
-        TypeChecker typeChecker = new TypeChecker();
-        Env runtimeEnv = new Env();
-        BigStep interpreter = new BigStep();
+        // 1. Persistent State
+        TypeChecker typeChecker = new TypeChecker(); // Persistent TypeEnv
+        Interpreter interpreter = new Interpreter(); // New Interpreter
+        Env runtimeEnv = new Env();                  // Persistent Runtime Env
 
         Scanner scanner = new Scanner(System.in);
+        StringBuilder inputBuffer = new StringBuilder();
 
-        // 2. The Loop
         while (true) {
-            System.out.print("> ");
-            if (!scanner.hasNextLine()) break;
+            // Prompt changes based on whether we are inside a block
+            if (inputBuffer.length() == 0) System.out.print("> ");
+            else System.out.print("| ");
 
-            String input = scanner.nextLine().trim();
-            if (input.isEmpty()) continue;
-            if (input.equals("exit") || input.equals("quit")) break;
+            if (!scanner.hasNextLine()) break;
+            String line = scanner.nextLine();
+
+            // Handle commands
+            if (line.trim().equals("exit")) break;
+            if (line.trim().isEmpty() && inputBuffer.length() == 0) continue;
+
+            inputBuffer.append(line).append("\n");
+
+            // 2. Multi-line Detection (Brace Counting)
+            if (!isInputComplete(inputBuffer.toString())) {
+                continue; // Keep reading lines
+            }
+
+            String input = inputBuffer.toString().trim();
+            inputBuffer.setLength(0); // Reset buffer
 
             try {
-                // A. Parse
+                // 3. Parse
                 SimpleLexer lexer = new SimpleLexer(new StringReader(input));
                 parser p = new parser(lexer);
+                // Ensure SimpleParser.cup has 'repl_unit' as the start symbol!
                 Symbol resultSym = p.parse(); 
                 AstNode result = (AstNode) resultSym.value;
 
-                // B. Type Check
-                TypeExpr type = typeChecker.check(result);
+                // 4. Type Check
+                // This ensures types are valid and 'var's are recorded in TypeEnv
+                TypeExpr type = typeChecker.check(result); 
+                
+                // If we get here, Type Checking Passed!
                 if (type != null) {
-                    System.out.println("Type: " + type);
+                    System.out.println("Type: " + type.toString());
                 }
 
-                // C. Execute
+                // 5. Execute
                 interpreter.evaluate(result, runtimeEnv);
 
             } catch (Exception e) {
                 System.out.println("Error: " + e.getMessage());
-                // e.printStackTrace(); // Uncomment for debugging
+                // e.printStackTrace(); // Useful for debugging crashes
+                
+                // If parser failed, the buffer is already cleared, so user types again.
             }
         }
+    }
+
+    // Heuristic: Input is complete if braces are balanced
+    private static boolean isInputComplete(String code) {
+        int braceCount = 0;
+        for (char c : code.toCharArray()) {
+            if (c == '{') braceCount++;
+            else if (c == '}') braceCount--;
+        }
+        return braceCount <= 0;
     }
 }

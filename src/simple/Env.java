@@ -28,6 +28,11 @@ class BoolVal extends EnvItem{
     }
 }
 
+// [NEW] Placeholder for 'var x;' declarations
+class UninitializedVal extends EnvItem {
+    public String toString() { return "Uninitialized"; }
+}
+
 class Closure extends EnvItem{
     final FuncDef def;
     final Env funcEnv;
